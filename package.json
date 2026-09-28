@@ -1,0 +1,10 @@
+{
+  "name": "game-2048",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Classic 2048 sliding-tile game — zero dependencies, deterministic tested core.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test.js"
+  }
+}

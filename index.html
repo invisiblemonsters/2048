@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>2048</title>
+<style>
+  :root {
+    --bg: #101016;
+    --panel: #17171f;
+    --cell: #23232e;
+    --text: #ececf3;
+    --muted: #9a9aab;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: radial-gradient(1200px 700px at 50% -10%, #1b1b27, var(--bg));
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 24px 16px;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  header {
+    width: min(92vw, 440px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  h1 { margin: 0; font-size: 40px; letter-spacing: -1px; }
+  .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  .scores { display: flex; gap: 10px; }
+  .score-box {
+    background: var(--panel);
+    border: 1px solid #262634;
+    border-radius: 10px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 84px;
+  }
+  .score-box .label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+  .score-box .value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .toolbar { width: min(92vw, 440px); display: flex; gap: 10px; }
+  button {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid #2b2b3a;
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  }
+  button:hover:not(:disabled) { background: #202030; border-color: #3a3a4e; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .game { position: relative; width: min(92vw, 440px); }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid #262634;
+    border-radius: 14px;
+    padding: 10px;
+    touch-action: none;
+  }
+  .cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: var(--cell);
+    font-weight: 700;
+    font-size: clamp(16px, 4.6vw, 30px);
+    font-variant-numeric: tabular-nums;
+    transition: background 100ms ease;
+  }
+  .cell.pop { animation: pop 150ms ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.8); }
+    100% { transform: scale(1); }
+  }
+  /* tile colors */
+  .tile-2    { background: #33333f; }
+  .tile-4    { background: #3d3d4d; }
+  .tile-8    { background: #3f4a78; }
+  .tile-16   { background: #46548c; }
+  .tile-32   { background: #4e5fa4; }
+  .tile-64   { background: #5a70c2; }
+  .tile-128  { background: #6b62d6; font-size: clamp(14px, 3.6vw, 26px); }
+  .tile-256  { background: #7d5ed6; font-size: clamp(14px, 3.6vw, 26px); }
+  .tile-512  { background: #9659cf; font-size: clamp(14px, 3.6vw, 26px); }
+  .tile-1024 { background: #b056bd; font-size: clamp(12px, 3vw, 22px); }
+  .tile-2048 { background: #e08b3c; color: #241503; font-size: clamp(12px, 3vw, 22px); }
+  .tile-super { background: #ffd166; color: #241503; font-size: clamp(12px, 3vw, 22px); }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    background: rgba(12, 12, 18, 0.82);
+    backdrop-filter: blur(2px);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .overlay[hidden] { display: none; }
+  .overlay h2 { margin: 0; font-size: 28px; }
+  .overlay p { margin: 0 0 10px; color: var(--muted); }
+  .hint { color: var(--muted); font-size: 12.5px; width: min(92vw, 440px); text-align: center; margin: 0; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>2048</h1>
+      <p class="subtitle">Slide tiles, merge equal numbers.</p>
+    </div>
+    <div class="scores">
+      <div class="score-box"><span class="label">Score</span><span class="value" id="score">0</span></div>
+      <div class="score-box"><span class="label">Best</span><span class="value" id="best">0</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="new-game" type="button">New game</button>
+    <button id="undo" type="button" disabled>Undo</button>
+  </div>
+
+  <div class="game">
+    <div class="board" id="board" aria-label="2048 board"></div>
+    <div class="overlay" id="overlay" hidden>
+      <h2 id="overlay-title"></h2>
+      <p id="overlay-text"></p>
+      <button id="overlay-btn" type="button"></button>
+    </div>
+  </div>
+
+  <p class="hint">Arrow keys or WASD to move · swipe on touch screens · one-step undo</p>
+
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
